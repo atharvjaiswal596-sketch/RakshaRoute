@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* RakshaRoute brand red */
+  --color-brand-50: #fef3f3;
+  --color-brand-100: #fde5e5;
+  --color-brand-200: #fbd0d0;
+  --color-brand-300: #f6adad;
+  --color-brand-400: #ee7d7d;
+  --color-brand-500: #e34d4d;
+  --color-brand-600: #d62828;
+  --color-brand-700: #b51f1f;
+  --color-brand-800: #961d1d;
+  --color-brand-900: #7c1d1d;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: var(--font-sans);
+}
+
+/* ---------------- keyframes ---------------- */
+
+@keyframes rk-drive {
+  from { transform: translateX(-18%); }
+  to { transform: translateX(16%); }
+}
+@keyframes rk-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes rk-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rk-slide-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rk-ring {
+  0% { box-shadow: 0 0 0 0 rgba(214, 40, 40, 0.45); }
+  100% { box-shadow: 0 0 0 20px rgba(214, 40, 40, 0); }
+}
+@keyframes rk-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.anim-fade-in { animation: rk-fade-in 0.5s ease both; }
+.anim-slide-in { animation: rk-slide-in 0.35s ease both; }
+.anim-float { animation: rk-float 5s ease-in-out infinite; }
+.anim-drive { animation: rk-drive 7s ease-in-out infinite alternate; }
+.anim-ring { animation: rk-ring 1.8s ease-out infinite; }
+.anim-pulse-dot { animation: rk-pulse-dot 1.4s ease-in-out infinite; }
+
+/* ---------------- map marker pins ---------------- */
+
+.map-marker { background: none; border: none; }
+
+.marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #d62828;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.28);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.marker-pin.user-pin {
+  border-color: #0284c7;
+  background: #f0f9ff;
+}
+
+.ambulance-marker .marker-pin {
+  animation: rk-ring 2s ease-out infinite;
+}
+
+.trip-marker .marker-pin,
+.user-marker .marker-pin {
+  animation: none;
+}
+
+/* leaflet polish */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22);
+  font-family: var(--font-sans);
+}
+.leaflet-popup-content {
+  font-family: var(--font-sans);
+  margin: 12px 14px;
+  line-height: 1.5;
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+
+/* thin scrollbars in list panels */
+.rk-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.rk-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+.rk-scroll::-webkit-scrollbar-track { background: transparent; }
