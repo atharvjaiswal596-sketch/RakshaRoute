@@ -32,10 +32,14 @@ mongoose
     const server = http.createServer(app);
     init(server);
 
-    server.listen(5001, () => {
-      console.log("Server running on http://localhost:5001");
-    });
+    if (require.main === module) {
+      server.listen(5001, () => {
+        console.log("Server running on http://localhost:5001");
+      });
+    }
   })
   .catch((err) => {
     console.error("MongoDB connection error:", err);
   });
+
+module.exports = app;
