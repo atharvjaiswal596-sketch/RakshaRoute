@@ -4,7 +4,6 @@ import {
   Ambulance as AmbulanceIcon,
   MapPin,
   LocateFixed,
-  Phone,
   UserRound,
   Hospital,
   RefreshCw,
@@ -17,11 +16,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import API from "../api";
-import { onLive, disconnectSocket } from "../socket";
+import { onLive, getSocket, disconnectSocket } from "../socket";
 import { useAuth } from "../components/AuthContext";
 import Logo from "../components/Logo";
 import { Button, Card, CardHeader, Field, StatCard, StatusPill } from "../components/ui";
-import { formatDistance, STATUS_META, TYPE_META, initials } from "../lib/format";
+import { formatDistance, formatEta, STATUS_META, TYPE_META, initials, haversineKm, etaMinutesFromKm } from "../lib/format";
 import { toast } from "../lib/toast";
 import AmbulanceMap from "../AmbulanceMap";
 import TripMap from "../TripMap";
@@ -142,10 +141,10 @@ export default function Dashboard() {
   const [live, setLive] = useState(false);
 
   const loadBookings = useCallback(async () => {
-    setHistoryError("");
     try {
       const { data } = await API.get("/bookings/my");
       setBookings(data.bookings || []);
+      setHistoryError("");
     } catch (err) {
       setHistoryError(err.response?.data?.message || "Failed to load bookings.");
     }
@@ -156,20 +155,22 @@ export default function Dashboard() {
       if (!silent) setLocationNote("Geolocation is not supported by this browser.");
       return;
     }
-    setLocating(true);
+    const showSpinner = !silent;
+    if (showSpinner) setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        if (!silent) {
+        if (showSpinner) {
           setLocationNote("Using your live location.");
           toast("Location updated", "info");
+          setLocating(false);
         }
-        setLocating(false);
       },
       () => {
-        if (!silent)
+        if (showSpinner) {
           setLocationNote("Location denied — using fallback coordinates (Chandigarh). Edit them below.");
-        setLocating(false);
+          setLocating(false);
+        }
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -183,6 +184,8 @@ export default function Dashboard() {
   }, [locationNote]);
 
   useEffect(() => {
+    // Fetch-on-mount: loadBookings/locate only setState after async work.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBookings();
     locate(true);
   }, [loadBookings, locate]);
@@ -225,8 +228,13 @@ export default function Dashboard() {
       );
     });
 
-    setLive(true);
+    // Mark the network live once the socket actually connects
+    const s = getSocket();
+    const markLive = () => setLive(true);
+    s.on("connect", markLive);
+
     return () => {
+      s.off("connect", markLive);
       offStatus();
       offLoc();
     };
@@ -309,6 +317,17 @@ export default function Dashboard() {
     [bookings, activeTripId]
   );
 
+  // Live ETA: straight-line ambulance → pickup, recomputed as socket
+  // location updates move the ambulance pin
+  const activeEta = useMemo(() => {
+    const amb = activeTrip?.ambulance?.location?.coordinates;
+    const pick = activeTrip?.pickupLocation?.coordinates;
+    if (!activeTrip || !Array.isArray(amb) || !Array.isArray(pick)) return null;
+    if (activeTrip.status === "completed" || activeTrip.status === "cancelled") return null;
+    const km = haversineKm(amb[1], amb[0], pick[1], pick[0]);
+    return formatEta(etaMinutesFromKm(km));
+  }, [activeTrip]);
+
   const filteredBookings =
     statusFilter === "all"
       ? bookings
@@ -345,8 +364,14 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <Button variant="secondary" size="sm" onClick={() => locate()}>
-            <LocateFixed className="size-4" /> Use my location
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => locate()}
+            disabled={locating}
+          >
+            <LocateFixed className="size-4" />{" "}
+            {locating ? "Locating…" : "Use my location"}
           </Button>
         </div>
 
@@ -495,6 +520,9 @@ export default function Dashboard() {
                           </p>
                           <p className="mt-1 text-xs font-bold text-brand-600">
                             {formatDistance(amb.distance)} away
+                            {amb.etaMinutes != null && (
+                              <span> · {formatEta(amb.etaMinutes)}</span>
+                            )}
                           </p>
                         </div>
                         <Button size="sm" onClick={() => selectAmbulance(amb)}>
@@ -564,6 +592,11 @@ export default function Dashboard() {
                         </p>
                         <p className="text-xs text-slate-500">
                           {selectedAmbulance.type} · {formatDistance(selectedAmbulance.distance) || "0 km"} away
+                          {selectedAmbulance.etaMinutes != null && (
+                            <span className="font-bold text-brand-600">
+                              {" "}· ⏱ {formatEta(selectedAmbulance.etaMinutes)}
+                            </span>
+                          )}
                         </p>
                       </div>
                       <button
@@ -630,6 +663,11 @@ export default function Dashboard() {
                       🚑 {justBooked.ambulance?.vehicleNumber} →
                       {justBooked.destination}
                     </p>
+                    {justBooked.etaMinutes != null && (
+                      <p className="mt-1 text-sm font-semibold text-emerald-800">
+                        ⏱ Arriving in {formatEta(justBooked.etaMinutes)}
+                      </p>
+                    )}
                     <p className="mt-1 text-sm text-emerald-700">
                       Status:{" "}
                       <span className="font-bold">
@@ -662,6 +700,21 @@ export default function Dashboard() {
                     </div>
 
                     <StatusStepper status={activeTrip.status} />
+
+                    {activeTrip.status === "completed" ? (
+                      <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                        <ShieldCheck className="size-4" /> Arrived at destination
+                      </p>
+                    ) : activeTrip.status === "cancelled" ? (
+                      <p className="flex items-center gap-2 text-sm font-semibold text-rose-600">
+                        <X className="size-4" /> Booking cancelled
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-2 text-sm font-semibold text-brand-700">
+                        <Timer className="size-4" />
+                        {activeEta ? `Arriving in ${activeEta}` : "Computing ETA…"}
+                      </p>
+                    )}
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="rounded-xl bg-slate-50 p-3">

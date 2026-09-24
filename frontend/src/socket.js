@@ -4,7 +4,9 @@ let socket = null;
 
 export function getSocket() {
   if (!socket) {
-    socket = io("http://localhost:5001", {
+    // Same-origin in production (rewritten to the backend service);
+    // proxied by Vite in dev. Override with VITE_SOCKET_URL if needed.
+    socket = io(import.meta.env.VITE_SOCKET_URL || undefined, {
       auth: { token: localStorage.getItem("raksharoute_token") || "" },
       transports: ["websocket", "polling"],
     });

@@ -1,0 +1,17 @@
+# Render Blueprint for the RakshaRoute backend.
+# Render will create the service from this file when you connect the repo.
+services:
+  - type: web
+    name: raksharoute-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      # Set these values in the Render dashboard (Render -> Service -> Environment) after the first deploy.
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false

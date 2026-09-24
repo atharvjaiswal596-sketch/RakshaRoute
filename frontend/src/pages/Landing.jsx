@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import API from "../api";
+import { formatEta } from "../lib/format";
 import {
   MapPin,
   Zap,
@@ -153,6 +156,30 @@ function Navbar() {
 }
 
 export default function Landing() {
+  const [hero, setHero] = useState(null); // { km, minutes } of nearest ambulance
+
+  useEffect(() => {
+    let alive = true;
+    // Public endpoint — nearest available ambulance around the fallback city
+    API.get("/ambulances/nearby", {
+      params: { latitude: 30.7333, longitude: 76.7794, distance: 10000 },
+    })
+      .then(({ data }) => {
+        if (!alive) return;
+        const nearest = data.ambulances?.[0];
+        if (nearest) {
+          setHero({
+            km: nearest.distance ? (nearest.distance / 1000).toFixed(1) : null,
+            minutes: nearest.etaMinutes ?? null,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -225,7 +252,7 @@ export default function Landing() {
                 Nearest ambulance
               </p>
               <p className="mt-0.5 text-lg font-extrabold text-slate-900">
-                1.2 km <span className="text-xs font-semibold text-emerald-600">away</span>
+                {hero?.km ? `${hero.km} km` : "1.2 km"} <span className="text-xs font-semibold text-emerald-600">away</span>
               </p>
             </div>
 
@@ -234,7 +261,7 @@ export default function Landing() {
                 Est. arrival
               </p>
               <p className="mt-0.5 text-lg font-extrabold text-slate-900">
-                4 min <span className="text-xs font-semibold text-sky-600">on the way</span>
+                {hero?.minutes != null ? formatEta(hero.minutes) : "4 min"} <span className="text-xs font-semibold text-sky-600">on the way</span>
               </p>
             </div>
 

@@ -17,7 +17,7 @@ import { onLive, disconnectSocket } from "../socket";
 import { useAuth } from "../components/AuthContext";
 import Logo from "../components/Logo";
 import { Button, Card, CardHeader, StatCard, StatusPill } from "../components/ui";
-import { STATUS_META, TYPE_META, initials } from "../lib/format";
+import { TYPE_META, initials } from "../lib/format";
 import { toast } from "../lib/toast";
 import AmbulanceMap from "../AmbulanceMap";
 
@@ -34,14 +34,15 @@ export default function Fleet() {
   const timer = useRef(null);
 
   const loadFleet = useCallback(async () => {
-    setError("");
     try {
       const [ambRes, bookRes] = await Promise.all([
         API.get("/ambulances"),
-        API.get("/bookings"),
+        // Activity feed is admin/driver-only — patients still get the map
+        API.get("/bookings").catch(() => null),
       ]);
       setAmbulances(ambRes.data.ambulances || []);
-      setBookings(bookRes.data.bookings || []);
+      setBookings(bookRes?.data?.bookings || []);
+      setError("");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load fleet data.");
     } finally {
@@ -50,6 +51,8 @@ export default function Fleet() {
   }, []);
 
   useEffect(() => {
+    // Fetch-on-mount data load; loadFleet only setStates after its awaits.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFleet();
 
     const offLoc = onLive("ambulance:location", (amb) => {

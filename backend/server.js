@@ -32,9 +32,13 @@ mongoose
     const server = http.createServer(app);
     init(server);
 
+    // Only listen when run directly (node server.js). When required as a
+    // module (e.g. Vercel serverless entrypoint) we just export the app.
     if (require.main === module) {
-      server.listen(5001, () => {
-        console.log("Server running on http://localhost:5001");
+      // Render injects PORT (e.g. 10000); default to 5001 for local dev
+      const port = process.env.PORT || 5001;
+      server.listen(port, () => {
+        console.log(`Server running on http://localhost:${port}`);
       });
     }
   })

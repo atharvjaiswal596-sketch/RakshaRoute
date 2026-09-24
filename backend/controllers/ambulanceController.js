@@ -1,4 +1,5 @@
 const Ambulance = require("../models/ambulance");
+const { computeEta, heuristicMinutes, haversineMeters } = require("../lib/eta");
 
 // Register ambulance
 const registerAmbulance = async (req, res) => {
@@ -125,6 +126,34 @@ const getNearbyAmbulances = async (req, res) => {
       },
     ]);
 
+    // ---- ETA for every result ----
+    // Road routing for the nearest few (concurrent, cached, never fails),
+    // straight-line heuristic for the rest so the response is instant.
+    const etaTarget = { lng: longitude, lat: latitude };
+
+    await Promise.allSettled(
+      ambulances.slice(0, 5).map(async (amb) => {
+        const [lng, lat] = amb.location?.coordinates || [];
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+        const eta = await computeEta({ from: { lng, lat }, to: etaTarget });
+        if (eta) {
+          amb.etaMinutes = eta.minutes;
+          amb.etaSource = eta.source;
+        }
+      })
+    );
+
+    for (const amb of ambulances) {
+      if (amb.etaMinutes != null) continue;
+      const [lng, lat] = amb.location?.coordinates || [];
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+      const minutes = heuristicMinutes(haversineMeters({ lng, lat }, etaTarget));
+      if (minutes != null) {
+        amb.etaMinutes = minutes;
+        amb.etaSource = "estimated";
+      }
+    }
+
     res.json({
       count: ambulances.length,
       ambulances,
@@ -204,9 +233,42 @@ const updateAmbulanceLocation = async (req, res) => {
   }
 };
 
+// ETA for a single ambulance → a destination point (road, with fallback)
+const getAmbulanceEta = async (req, res) => {
+  try {
+    const ambulance = await Ambulance.findById(req.params.id);
+    if (!ambulance) {
+      return res.status(404).json({ message: "Ambulance not found" });
+    }
+
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({
+        message: "Destination lat/lng query params are required",
+      });
+    }
+
+    const [aLng, aLat] = ambulance.location?.coordinates || [];
+    const eta = await computeEta({
+      from: { lng: aLng, lat: aLat },
+      to: { lng, lat },
+    });
+
+    res.json({ ambulance: ambulance._id, eta });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerAmbulance,
   getNearbyAmbulances,
   getAllAmbulances,
   updateAmbulanceLocation,
+  getAmbulanceEta,
 };

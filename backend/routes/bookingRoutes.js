@@ -9,12 +9,15 @@ const {
 } = require("../controllers/bookingcontroller");
 
 const protect = require("../middleware/authMiddleware");
+const { authorize } = protect;
 
 const router = express.Router();
 
 router.post("/", protect, bookAmbulance);
 
-router.get("/", protect, getAllBookings);
+// The fleet-wide activity feed contains other patients' data —
+// restrict it to drivers and admins
+router.get("/", protect, authorize("admin", "driver"), getAllBookings);
 
 router.get("/my", protect, getMyBookings);
 

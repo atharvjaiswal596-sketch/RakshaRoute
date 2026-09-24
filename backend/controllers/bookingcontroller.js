@@ -1,6 +1,25 @@
 const mongoose = require("mongoose");
 const Booking = require("../models/booking");
 const Ambulance = require("../models/ambulance");
+const { computeEta, heuristicMinutes, haversineMeters } = require("../lib/eta");
+
+// Attach a straight-line ETA to a booking (ambulance → pickup) — instant,
+// used for the booking confirmation card
+function attachInstantEta(booking) {
+  const amb = booking?.ambulance?.location?.coordinates;
+  const pick = booking?.pickupLocation?.coordinates;
+  if (!booking || !amb || !pick) return;
+  const minutes = heuristicMinutes(
+    haversineMeters(
+      { lng: amb[0], lat: amb[1] },
+      { lng: pick[0], lat: pick[1] }
+    )
+  );
+  if (minutes != null) {
+    booking.etaMinutes = minutes;
+    booking.etaSource = "estimated";
+  }
+}
 
 // BOOK AMBULANCE
 const bookAmbulance = async (req, res) => {
@@ -78,7 +97,10 @@ const bookAmbulance = async (req, res) => {
 
     const populatedBooking = await Booking.findById(booking._id)
       .populate("ambulance")
-      .populate("user", "-password");
+      .populate("user", "-password")
+      .lean();
+
+    attachInstantEta(populatedBooking);
 
     // Broadcast the new booking so fleet views update instantly
     const { emit } = require("../config/socket");
@@ -137,7 +159,8 @@ const getBooking = async (req, res) => {
 
     const booking = await Booking.findById(id)
       .populate("ambulance")
-      .populate("user", "-password");
+      .populate("user", "-password")
+      .lean();
 
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
@@ -156,6 +179,20 @@ const getBooking = async (req, res) => {
 
     if (!authorized) {
       return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // Road ETA (with straight-line fallback) for this trip's pickup point
+    const ambCoords = booking.ambulance?.location?.coordinates;
+    const pickCoords = booking.pickupLocation?.coordinates;
+    if (ambCoords && pickCoords) {
+      const eta = await computeEta({
+        from: { lng: ambCoords[0], lat: ambCoords[1] },
+        to: { lng: pickCoords[0], lat: pickCoords[1] },
+      });
+      if (eta) {
+        booking.etaMinutes = eta.minutes;
+        booking.etaSource = eta.source;
+      }
     }
 
     res.status(200).json({ booking });

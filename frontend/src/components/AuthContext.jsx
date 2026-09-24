@@ -32,6 +32,9 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Context modules conventionally co-locate the hook with the provider;
+// Fast Refresh simply won't hot-reload the hook itself (fine here).
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");

@@ -10,4 +10,15 @@ export default defineConfig({
     tailwindcss(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    proxy: {
+      // Same-origin URLs in api.js / socket.js are forwarded to the
+      // backend during development
+      '/api': 'http://localhost:5001',
+      '/socket.io': {
+        target: 'http://localhost:5001',
+        ws: true
+      }
+    }
+  }
 })

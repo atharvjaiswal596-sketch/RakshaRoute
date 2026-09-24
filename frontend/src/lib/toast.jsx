@@ -16,6 +16,9 @@ const STYLES = {
   info: "border-sky-200 bg-sky-50 text-sky-800",
 };
 
+// `toast` is a module-level emitter tied to ToastContainer — intentionally
+// exported from the same file (pub/sub pattern).
+// eslint-disable-next-line react-refresh/only-export-components
 export function toast(message, type = "info") {
   const id = ++seq;
   listeners.forEach((fn) => fn({ id, message, type }));

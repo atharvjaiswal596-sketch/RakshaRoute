@@ -4,6 +4,31 @@ export function formatDistance(meters) {
   return `${Math.round(m)} m`;
 }
 
+// "~6 min", "<1 min", or null for invalid input
+export function formatEta(minutes) {
+  const m = Number(minutes);
+  if (!Number.isFinite(m) || m < 0) return null;
+  if (m < 1) return "<1 min";
+  return `~${Math.round(m)} min`;
+}
+
+// Great-circle distance between two points in km
+export function haversineKm(aLat, aLng, bLat, bLng) {
+  const R = 6371;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+// Straight-line ETA in minutes (same 30 km/h urban speed as the backend)
+export function etaMinutesFromKm(km) {
+  return (Number(km) || 0) / 0.5;
+}
+
 export const STATUS_META = {
   confirmed: {
     label: "Confirmed",

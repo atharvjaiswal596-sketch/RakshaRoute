@@ -1,4 +1,5 @@
 const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
 
 let io = null;
 
@@ -7,6 +8,21 @@ function init(server) {
 
   io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST", "PATCH"] },
+  });
+
+  // Require a valid JWT before allowing a live connection,
+  // otherwise anyone could eavesdrop on all trip broadcasts
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+
+    if (!token) return next(new Error("Unauthorized: no token"));
+
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+      next();
+    } catch {
+      next(new Error("Unauthorized: invalid token"));
+    }
   });
 
   io.on("connection", (socket) => {

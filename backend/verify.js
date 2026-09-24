@@ -69,6 +69,10 @@ async function main() {
   check("nearby with coords -> 200", r.status === 200);
   check("seeded ambulances returned", Array.isArray(r.data?.ambulances) && r.data.ambulances.length > 0);
 
+  r = await req("GET", "/ambulances/nearby?latitude=30.7333&longitude=76.7794&distance=50000");
+  check("nearby includes ETA", (r.data?.ambulances || []).some((a) => a.etaMinutes > 0));
+  check("ETA source is road/estimated", (r.data?.ambulances || []).every((a) => !a.etaMinutes || ["road", "estimated"].includes(a.etaSource)));
+
   r = await req("GET", "/ambulances/nearby?latitude=30.7333&longitude=76.7794&distance=-5");
   check("negative distance is clamped -> 200", r.status === 200);
 
@@ -130,6 +134,7 @@ async function main() {
     body: { ambulanceId: ambId, latitude: 30.7333, longitude: 76.7794, destination: "PGI Chandigarh", patientName: "Alice", patientPhone: "1111111111" },
   });
   check("book ambulance -> 201", r.status === 201);
+  check("confirmation includes ETA", r.data?.booking?.etaMinutes > 0);
 
   r = await req("POST", "/bookings", {
     token: tokenA,
@@ -160,6 +165,10 @@ async function main() {
 
   r = await req("GET", `/bookings/${bookingId}`, { token: tokenA });
   check("owner views own booking -> 200", r.status === 200);
+  check("booking detail includes ETA", r.data?.booking?.etaMinutes > 0);
+
+  r = await req("GET", `/ambulances/${ambId}/eta?lat=30.7333&lng=76.7794`, { token: tokenA });
+  check("ambulance ETA endpoint -> 200 with minutes", r.status === 200 && r.data?.eta?.minutes > 0);
 
   r = await req("GET", "/bookings/not-an-objectid", { token: tokenA });
   check("invalid booking id -> 400", r.status === 400);

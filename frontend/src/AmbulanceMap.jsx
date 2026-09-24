@@ -8,6 +8,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { formatEta } from "./lib/format";
 
 // Simple emoji pins — avoids the broken default icon assets in Vite builds
 const ambulanceIcon = L.divIcon({
@@ -95,6 +96,14 @@ function AmbulanceMap({
                 <span>{(amb.distance / 1000).toFixed(2)} km away</span>
               ) : (
                 <span>Status: {amb.status}</span>
+              )}
+              {amb.etaMinutes != null && (
+                <>
+                  <br />
+                  <span style={{ color: "#b51f1f", fontWeight: 700 }}>
+                    ⏱ Arriving in {formatEta(amb.etaMinutes)}
+                  </span>
+                </>
               )}
               {onSelect ? (
                 <>
