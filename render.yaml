@@ -8,10 +8,16 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
-    healthCheckPath: /
+    healthCheckPath: /health
     envVars:
       # Set these values in the Render dashboard (Render -> Service -> Environment) after the first deploy.
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
         sync: false
+      # Comma-separated list of allowed frontend origins (or unset = allow all).
+      # The live Vercel app is https://raksha-route-odfi.vercel.app; add any
+      # Vercel preview/branch origins here too, separated by commas.
+      - key: CORS_ORIGIN
+        value: https://raksha-route-odfi.vercel.app
+        sync: true

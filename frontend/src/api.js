@@ -4,7 +4,7 @@ import axios from "axios";
 // and in dev (Vite proxies /api → http://localhost:5001).
 // Override with VITE_API_URL if the API lives on a different host.
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "/api",
 });
 
 // Attach the stored JWT to every request

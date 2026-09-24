@@ -1,5 +1,6 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const { getCorsOrigins } = require("./cors");
 
 let io = null;
 
@@ -7,7 +8,7 @@ function init(server) {
   if (io) return io;
 
   io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST", "PATCH"] },
+    cors: { origin: getCorsOrigins(), methods: ["GET", "POST", "PATCH"] },
   });
 
   // Require a valid JWT before allowing a live connection,
