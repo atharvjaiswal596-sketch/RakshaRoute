@@ -74,7 +74,7 @@ export default function AuthPage({ mode }) {
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
       const body = isLogin
         ? { email, password }
         : { name, email, password, phone };

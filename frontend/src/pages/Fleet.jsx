@@ -36,9 +36,9 @@ export default function Fleet() {
   const loadFleet = useCallback(async () => {
     try {
       const [ambRes, bookRes] = await Promise.all([
-        API.get("/ambulances"),
+        API.get("/api/ambulances"),
         // Activity feed is admin/driver-only — patients still get the map
-        API.get("/bookings").catch(() => null),
+        API.get("/api/bookings").catch(() => null),
       ]);
       setAmbulances(ambRes.data.ambulances || []);
       setBookings(bookRes?.data?.bookings || []);
@@ -110,7 +110,7 @@ export default function Fleet() {
       );
 
       try {
-        await API.patch(`/ambulances/${amb._id}/location`, {
+        await API.patch(`/api/ambulances/${amb._id}/location`, {
           latitude: lat + dLat,
           longitude: lng + dLng,
         });

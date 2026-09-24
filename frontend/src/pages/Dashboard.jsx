@@ -142,7 +142,7 @@ export default function Dashboard() {
 
   const loadBookings = useCallback(async () => {
     try {
-      const { data } = await API.get("/bookings/my");
+      const { data } = await API.get("/api/bookings/my");
       setBookings(data.bookings || []);
       setHistoryError("");
     } catch (err) {
@@ -280,7 +280,7 @@ export default function Dashboard() {
     setBookingError("");
     setBookingLoading(true);
     try {
-      const { data } = await API.post("/bookings", {
+      const { data } = await API.post("/api/bookings", {
         ambulanceId: selectedAmbulance._id,
         latitude: coords.lat,
         longitude: coords.lng,
@@ -304,7 +304,7 @@ export default function Dashboard() {
   const cancelBooking = async (id) => {
     if (!window.confirm("Cancel this booking?")) return;
     try {
-      await API.patch(`/bookings/${id}/status`, { status: "cancelled" });
+      await API.patch(`/api/bookings/${id}/status`, { status: "cancelled" });
       await loadBookings();
       toast("Booking cancelled", "error");
     } catch (err) {
